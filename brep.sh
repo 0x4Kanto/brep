@@ -124,20 +124,48 @@ install_repo() {
 
     valid_name "$name" || die "Invalid repository name."
     [[ -d "$repo" ]] || die "Repository $name not found."
-    [[ -f "$repo/Makefile" || -f "$repo/makefile" ]] || die "No Makefile found in $repo."
 
     echo "brep: building $name with $JOBS jobs"
 
-    if [[ "$quiet" == 1 ]]; then
-        log="$(mktemp)"
-        if ! (cd "$repo" && make -s -j"$JOBS" && make -s install) >"$log" 2>&1; then
-            cat "$log" >&2
+    if [[ -f "$repo/INSTALL" ]]; then
+        if [[ "$quiet" == 1 ]]; then
+            log="$(mktemp)"
+            if ! (cd "$repo" && sh ./INSTALL) >"$log" 2>&1; then
+                cat "$log" >&2
+                rm -f "$log"
+                die "Installation failed."
+            fi
             rm -f "$log"
-            die "Build or installation failed."
+        else
+            (cd "$repo" && sh ./INSTALL) || die "Installation failed."
         fi
-        rm -f "$log"
+
+    elif [[ -f "$repo/configure" ]]; then
+        if [[ "$quiet" == 1 ]]; then
+            log="$(mktemp)"
+            if ! (cd "$repo" && ./configure && make -s -j"$JOBS" && make -s install) >"$log" 2>&1; then
+                cat "$log" >&2
+                rm -f "$log"
+                die "Build or installation failed."
+            fi
+            rm -f "$log"
+        else
+            (cd "$repo" && ./configure && make -j"$JOBS" && make install) ||
+                die "Build or installation failed."
+        fi
+
+    elif [[ -f "$repo/Makefile" || -f "$repo/makefile" ]]; then
+        if [[ "$quiet" == 1 ]]; then
+            make_args=(-s)
+        else
+            make_args=()
+        fi
+
+        (cd "$repo" && make "${make_args[@]}" -j"$JOBS" &&
+            make "${make_args[@]}" install) ||
+            die "Build or installation failed."
     else
-        (cd "$repo" && make -j"$JOBS" && make install) || die "Build or installation failed."
+        die "No INSTALL, configure, or Makefile found in $repo."
     fi
 
     echo "brep: $name successfully installed"
