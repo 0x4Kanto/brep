@@ -24,7 +24,7 @@ Options:
   --mkdir         Create repository directory
   --help          Show this message
 
-Supported: srcmake, .tar.gz, .tgz, .tar.xz, .tar.bz2, .tar, .zip
+Supported: git, .tar.gz, .tgz, .tar.xz, .tar.bz2, .tar, .zip { soon srcmake still finishing up some bloat }
 EOF
 }
 
